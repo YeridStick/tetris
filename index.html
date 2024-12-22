@@ -259,9 +259,6 @@
             <button class="mobile-btn" id="downButton">↓</button>
             <button class="mobile-btn" id="rightButton">→</button>
         </div>
-        <div class="controls-row">
-            <button class="mobile-btn wide" id="dropButton">DROP</button>
-        </div>
     </div>
 
     <div id="gameOver" style="display: none;">
@@ -324,6 +321,11 @@
         let lines = 0;
         let gameInterval = null;
         let isGameOver = false;
+        let touchIntervals = {};
+        let rotateButtonLocked = false;
+        let lastRotateTime = 0;
+        let dropButtonLocked = false;
+        const ROTATE_COOLDOWN = 200;
 
         // Elementos del DOM
         const gameBoard = document.getElementById('gameBoard');
@@ -336,6 +338,52 @@
         const finalScoreDisplay = document.getElementById('finalScore');
         const startButton = document.getElementById('startButton');
         const restartButton = document.getElementById('restartButton');
+
+        function setupTouchInterval(buttonId, action, interval = 150) {
+            const button = document.getElementById(buttonId);
+
+            button.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (touchIntervals[buttonId]) return; // Evita múltiples intervalos
+
+                action(); // Ejecuta la acción de inmediato
+                touchIntervals[buttonId] = setInterval(action, interval);
+            });
+
+            button.addEventListener('touchend', () => {
+                clearInterval(touchIntervals[buttonId]);
+                delete touchIntervals[buttonId];
+            });
+
+            button.addEventListener('touchcancel', () => {
+                clearInterval(touchIntervals[buttonId]);
+                delete touchIntervals[buttonId];
+            });
+        }
+        
+        // Configurar los botones táctiles
+        setupTouchInterval('leftButton', () => {
+            if (currentPiece) {
+                currentPiece.moveLeft();
+                updateBoard();
+            }
+        });
+
+        setupTouchInterval('rightButton', () => {
+            if (currentPiece) {
+                currentPiece.moveRight();
+                updateBoard();
+            }
+        });
+
+        setupTouchInterval('downButton', () => {
+            if (currentPiece) {
+                if (!currentPiece.moveDown()) {
+                    lockPiece();
+                }
+                updateBoard();
+            }
+        }, 50); // Menor intervalo para un "soft drop"
 
         // Inicializar tablero
         function createBoard() {
@@ -363,10 +411,9 @@
 
             rotate() {
                 // Caso especial para la pieza O (cuadrado) - no necesita rotar
-                if (this.color === 'O') return;
+                if (this.color === 'O') return false;
                 
                 const N = this.shape.length;
-                // Crear nueva matriz para la rotación
                 const rotated = Array(N).fill().map(() => Array(N).fill(0));
                 
                 // Rotar la matriz en sentido horario
@@ -376,27 +423,23 @@
                     }
                 }
                 
-                // Lista de posibles ajustes de posición para cuando la rotación colisiona
                 const kicks = [
                     { x: 0, y: 0 },    // Sin ajuste
-                    { x: -1, y: 0 },   // Intentar mover izquierda
-                    { x: 1, y: 0 },    // Intentar mover derecha
-                    { x: 0, y: -1 },   // Intentar mover arriba
-                    { x: -2, y: 0 },   // Intentar mover 2 espacios izquierda
-                    { x: 2, y: 0 },    // Intentar mover 2 espacios derecha
-                    { x: 0, y: -2 }    // Intentar mover 2 espacios arriba
+                    { x: -1, y: 0 },   // Izquierda
+                    { x: 1, y: 0 },    // Derecha
+                    { x: 0, y: -1 },   // Arriba
+                    { x: -2, y: 0 },   // 2 espacios izquierda
+                    { x: 2, y: 0 },    // 2 espacios derecha
+                    { x: 0, y: -2 }    // 2 espacios arriba
                 ];
-                
-                // Probar cada posible ajuste
+
+                // Probar cada ajuste posible
                 for (const kick of kicks) {
-                    const newX = this.x + kick.x;
-                    const newY = this.y + kick.y;
-                    
-                    if (this.isValidMove(newX, newY, rotated)) {
-                        this.x = newX;
-                        this.y = newY;
+                    if (this.isValidMove(this.x + kick.x, this.y + kick.y, rotated)) {
+                        this.x += kick.x;
+                        this.y += kick.y;
                         this.shape = rotated;
-                        return true;
+                        return true; // Rotación exitosa
                     }
                 }
                 
@@ -447,7 +490,12 @@
             }
 
             hardDrop() {
-                while (this.moveDown()) {}
+                let dropDistance = 0;
+                while (this.isValidMove(this.x, this.y + 1)) {
+                    this.y++;
+                    dropDistance++;
+                }
+                return dropDistance > 0;
             }
         }
 
@@ -478,9 +526,9 @@
             return new Piece(shape);
         }
 
-        document.querySelectorAll('.mobile-btn').forEach(button => {
+        document.querySelectorAll('.mobile-btn').forEach((button) => {
             button.addEventListener('touchstart', (e) => {
-                e.preventDefault();
+                e.preventDefault(); // Previene el comportamiento predeterminado del navegador
             });
         });
 
@@ -494,7 +542,7 @@
                             updateBoard();
                         }
                     },
-                    interval: 150 // Velocidad de repetición en ms
+                    interval: 150
                 },
                 'rightButton': {
                     start: () => {
@@ -514,30 +562,39 @@
                             updateBoard();
                         }
                     },
-                    interval: 50
+                    interval: 100
                 },
                 'rotateButton': {
                     start: () => {
-                        if (!isGameOver && currentPiece) {
-                            currentPiece.rotate();
-                            updateBoard();
-                            rotateButton.style.transform = 'rotate(90deg)';
+                        if (!isGameOver && currentPiece && !rotateButtonLocked) {
+                            rotateButtonLocked = true;
+                            const rotated = currentPiece.rotate();
+                            if (rotated) {
+                                rotateButton.style.transform = 'rotate(90deg)';
+                                updateBoard();
+                            }
                             setTimeout(() => {
                                 rotateButton.style.transform = 'rotate(0deg)';
-                            }, 150);
+                                rotateButtonLocked = false;
+                            }, 200);
                         }
                     },
-                    interval: 0 
+                    interval: 0
                 },
                 'dropButton': {
                     start: () => {
-                        if (!isGameOver && currentPiece) {
+                        if (!isGameOver && currentPiece && !dropButtonLocked) {
+                            dropButtonLocked = true; // Prevenir múltiples drops
                             currentPiece.hardDrop();
                             lockPiece();
                             updateBoard();
+                            // Desbloquear después de un breve delay
+                            setTimeout(() => {
+                                dropButtonLocked = false;
+                            }, 300);
                         }
                     },
-                    interval: 0 // Sin repetición
+                    interval: 0
                 }
             };
 
@@ -547,30 +604,37 @@
                 const button = document.getElementById(buttonId);
                 const action = controlActions[buttonId];
 
+                // Prevenir el comportamiento por defecto
                 button.addEventListener('touchstart', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Ejecutar acción inmediatamente
                     action.start();
+                    
+                    // Configurar intervalo si es necesario
                     if (action.interval > 0) {
+                        // Limpiar cualquier intervalo existente
+                        if (activeIntervals[buttonId]) {
+                            clearInterval(activeIntervals[buttonId]);
+                        }
                         activeIntervals[buttonId] = setInterval(action.start, action.interval);
                     }
                 });
 
-                button.addEventListener('touchend', () => {
+                const clearButton = () => {
                     if (activeIntervals[buttonId]) {
                         clearInterval(activeIntervals[buttonId]);
                         delete activeIntervals[buttonId];
                     }
-                });
+                };
 
-                button.addEventListener('touchcancel', () => {
-                    if (activeIntervals[buttonId]) {
-                        clearInterval(activeIntervals[buttonId]);
-                        delete activeIntervals[buttonId];
-                    }
-                });
+                button.addEventListener('touchend', clearButton);
+                button.addEventListener('touchcancel', clearButton);
+                button.addEventListener('touchleave', clearButton);
             });
 
-            // Limpiar intervalos al game over
+            // Limpiar todos los intervalos cuando el juego termina
             const originalGameOver = gameOver;
             gameOver = function() {
                 Object.values(activeIntervals).forEach(clearInterval);
@@ -884,35 +948,52 @@
         const dropButton = document.getElementById('dropButton');
 
         // Funciones para los botones
-        leftButton.addEventListener('touchstart', () => {
+        leftButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
             if (currentPiece) {
                 currentPiece.moveLeft();
                 updateBoard();
             }
         });
 
-        rotateButton.addEventListener('touchstart', () => {
+        rotateButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+
+            if (rotateButtonLocked) return; // Si está bloqueado, no hace nada
+
+            rotateButtonLocked = true; // Bloquea el botón
             if (currentPiece) {
                 currentPiece.rotate();
                 updateBoard();
             }
+
+            // Desbloquea el botón después de 150ms (ajusta según sea necesario)
+            setTimeout(() => {
+                rotateButtonLocked = false;
+            }, 150);
         });
 
-        rightButton.addEventListener('touchstart', () => {
+        rightButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
             if (currentPiece) {
                 currentPiece.moveRight();
                 updateBoard();
             }
         });
 
-        downButton.addEventListener('touchstart', () => {
-            if (currentPiece && !currentPiece.moveDown()) {
-                lockPiece();
+        downButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (currentPiece) {
+                if (!currentPiece.moveDown()) {
+                    lockPiece();
+                }
+                updateBoard();
             }
-            updateBoard();
         });
 
-        dropButton.addEventListener('touchstart', () => {
+        
+        dropButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
             if (currentPiece) {
                 currentPiece.hardDrop();
                 lockPiece();
