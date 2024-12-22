@@ -473,7 +473,7 @@
                             const newX = x + col;
                             const newY = y + row;
 
-                            // Verificar bordes y colisiones
+                            // Verificar límites y colisiones
                             if (
                                 newX < 0 || // Fuera del lado izquierdo
                                 newX >= BOARD_WIDTH || // Fuera del lado derecho
@@ -1071,19 +1071,46 @@
 
         function setupTouchControl(buttonId, action, cooldown = 150) {
             const button = document.getElementById(buttonId);
+            let moveLocked = false; // Bloqueo local para este botón
 
             button.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                if (moveLocked) return; // Bloquea el movimiento si ya está ejecutándose
+                if (moveLocked) return; // Bloquea múltiples ejecuciones
                 moveLocked = true;
 
-                action(); // Ejecutar la acción
+                action(); // Ejecutar acción inmediatamente
 
+                // Configurar desbloqueo después del cooldown
                 setTimeout(() => {
-                    moveLocked = false; // Desbloqueo después del cooldown
+                    moveLocked = false;
                 }, cooldown);
             });
         }
+
+        // Configurar controles táctiles
+        setupTouchControl('leftButton', () => {
+            if (currentPiece) {
+                currentPiece.moveLeft();
+                updateBoard();
+            }
+        });
+
+        setupTouchControl('rightButton', () => {
+            if (currentPiece) {
+                currentPiece.moveRight();
+                updateBoard();
+            }
+        });
+
+        setupTouchControl('downButton', () => {
+            if (currentPiece) {
+                if (!currentPiece.moveDown()) {
+                    lockPiece();
+                }
+                updateBoard();
+            }
+        }, 50); // Menor intervalo para "soft drop"
+
     </script>
 </body>
 </html>
