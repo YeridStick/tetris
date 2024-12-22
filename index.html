@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tetris</title>
+    
     <style>
         * {
             margin: 0;
@@ -127,6 +128,38 @@
         #controls p {
             margin: 5px 0;
         }
+
+        #mobileControls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        #mobileControls button {
+            width: 60px;
+            height: 60px;
+            background: #00f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        #mobileControls button:hover {
+            background: #00a;
+        }
+
+        #mobileControls button:active {
+            background: #005;
+        }
+
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
@@ -155,6 +188,14 @@
                 <p>Lines: <span id="lines">0</span></p>
             </div>
         </div>
+    </div>
+
+    <div id="mobileControls">
+        <button id="leftButton">←</button>
+        <button id="rotateButton">↑</button>
+        <button id="rightButton">→</button>
+        <button id="downButton">↓</button>
+        <button id="dropButton">Drop</button>
     </div>
 
     <div id="gameOver" style="display: none;">
@@ -616,6 +657,50 @@
 
         window.addEventListener('resize', resizeGame);
         window.addEventListener('load', resizeGame);
+
+        // Elementos de los botones
+        const leftButton = document.getElementById('leftButton');
+        const rotateButton = document.getElementById('rotateButton');
+        const rightButton = document.getElementById('rightButton');
+        const downButton = document.getElementById('downButton');
+        const dropButton = document.getElementById('dropButton');
+
+        // Funciones para los botones
+        leftButton.addEventListener('touchstart', () => {
+            if (currentPiece) {
+                currentPiece.moveLeft();
+                updateBoard();
+            }
+        });
+
+        rotateButton.addEventListener('touchstart', () => {
+            if (currentPiece) {
+                currentPiece.rotate();
+                updateBoard();
+            }
+        });
+
+        rightButton.addEventListener('touchstart', () => {
+            if (currentPiece) {
+                currentPiece.moveRight();
+                updateBoard();
+            }
+        });
+
+        downButton.addEventListener('touchstart', () => {
+            if (currentPiece && !currentPiece.moveDown()) {
+                lockPiece();
+            }
+            updateBoard();
+        });
+
+        dropButton.addEventListener('touchstart', () => {
+            if (currentPiece) {
+                currentPiece.hardDrop();
+                lockPiece();
+                updateBoard();
+            }
+        });
     </script>
 </body>
 </html>
