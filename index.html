@@ -812,6 +812,15 @@
             isGameOver = true;
             clearInterval(gameInterval);
             
+            // Limpiar todos los intervalos activos
+            Object.values(touchIntervals).forEach(clearInterval);
+            touchIntervals = {};
+            
+            // Reiniciar estados de los botones
+            rotateButtonLocked = false;
+            moveButtonLocked = false;
+            dropButtonLocked = false;
+            
             // Efecto de parpadeo para las piezas
             let flashCount = 0;
             const flashInterval = setInterval(() => {
@@ -868,15 +877,27 @@
 
         // Reiniciar juego
         function resetGame() {
+            // Limpiar todos los intervalos y estados
+            clearInterval(gameInterval);
+            Object.values(touchIntervals).forEach(clearInterval);
+            touchIntervals = {};
+            
+            // Reiniciar todas las variables de control
+            isGameOver = false;
+            rotateButtonLocked = false;
+            moveButtonLocked = false;
+            dropButtonLocked = false;
+            lastMoveTime = 0;
+            lastRotateTime = 0;
+            
             // Limpiar tablero
             board = [];
             createBoard();
             
-            // Reiniciar variables
+            // Reiniciar variables del juego
             score = 0;
             level = 1;
             lines = 0;
-            isGameOver = false;
             
             // Actualizar displays
             scoreDisplay.textContent = '0';
@@ -886,13 +907,29 @@
             // Ocultar pantalla de game over
             gameOverScreen.style.display = 'none';
             
-            // Generar nuevas piezas
+            // Asegurarse de que todos los botones vuelvan a su estado original
+            document.getElementById('rotateButton').style.transform = 'rotate(0deg)';
+            
+            // Limpiar cualquier estilo residual en las celdas
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                cell.className = 'cell';
+                cell.style.opacity = '1';
+                cell.style.transform = 'none';
+                cell.style.transition = 'none';
+            });
+            
+            // Reiniciar las piezas
             currentPiece = getRandomPiece();
             nextPiece = getRandomPiece();
             updateNextPiece();
             
-            // Iniciar el juego
-            updateGameSpeed();
+            // Reiniciar los controles móviles
+            setupMobileControls();
+            
+            // Iniciar el juego con velocidad inicial
+            const initialSpeed = 1000;
+            gameInterval = setInterval(gameLoop, initialSpeed);
         }
 
         // Iniciar juego
