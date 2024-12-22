@@ -537,29 +537,41 @@
             const controlActions = {
                 'leftButton': {
                     start: () => {
-                        if (!isGameOver && currentPiece) {
+                        if (!isGameOver && currentPiece && !moveButtonLocked) {
+                            moveButtonLocked = true;
                             currentPiece.moveLeft();
                             updateBoard();
+                            setTimeout(() => {
+                                moveButtonLocked = false;
+                            }, 100); // Pequeño cooldown para evitar movimientos múltiples
                         }
                     },
-                    interval: 150
+                    interval: 150 // Velocidad de repetición para mantener presionado
                 },
                 'rightButton': {
                     start: () => {
-                        if (!isGameOver && currentPiece) {
+                        if (!isGameOver && currentPiece && !moveButtonLocked) {
+                            moveButtonLocked = true;
                             currentPiece.moveRight();
                             updateBoard();
+                            setTimeout(() => {
+                                moveButtonLocked = false;
+                            }, 100);
                         }
                     },
                     interval: 150
                 },
                 'downButton': {
                     start: () => {
-                        if (!isGameOver && currentPiece) {
+                        if (!isGameOver && currentPiece && !moveButtonLocked) {
+                            moveButtonLocked = true;
                             if (!currentPiece.moveDown()) {
                                 lockPiece();
                             }
                             updateBoard();
+                            setTimeout(() => {
+                                moveButtonLocked = false;
+                            }, 50);
                         }
                     },
                     interval: 100
