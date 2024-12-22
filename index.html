@@ -341,27 +341,20 @@
 
         function setupTouchInterval(buttonId, action, interval = 150) {
             const button = document.getElementById(buttonId);
-            let isLocked = false; // Bloqueo para evitar múltiples disparos
+            let isLocked = false; // Bloqueo temporal
 
             button.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                if (isLocked || touchIntervals[buttonId]) return; // Evita múltiples intervalos
+                if (isLocked || touchIntervals[buttonId]) return; // Evitar movimientos adicionales
+                action(); // Ejecutar acción
+                isLocked = true;
 
-                action(); // Ejecuta la acción de inmediato
-                isLocked = true; // Activa el bloqueo
-
-                setTimeout(() => {
-                    isLocked = false; // Desbloquea después de un corto periodo
-                }, interval);
-
+                setTimeout(() => (isLocked = false), interval); // Desbloquear después del intervalo
                 touchIntervals[buttonId] = setInterval(() => {
                     if (!isLocked) {
                         action();
                         isLocked = true;
-
-                        setTimeout(() => {
-                            isLocked = false;
-                        }, interval);
+                        setTimeout(() => (isLocked = false), interval);
                     }
                 }, interval);
             });
@@ -464,19 +457,19 @@
 
             // Mejorar la validación de movimientos
             isValidMove(x, y, shape = this.shape) {
-                const width = shape[0].length;
-                const height = shape.length;
-                
-                for (let row = 0; row < height; row++) {
-                    for (let col = 0; col < width; col++) {
+                for (let row = 0; row < shape.length; row++) {
+                    for (let col = 0; col < shape[row].length; col++) {
                         if (shape[row][col]) {
                             const newX = x + col;
                             const newY = y + row;
-                            
+
                             // Verificar bordes y colisiones
-                            if (newX < 0 || newX >= BOARD_WIDTH || 
-                                newY >= BOARD_HEIGHT ||
-                                (newY >= 0 && board[newY][newX])) {
+                            if (
+                                newX < 0 || // Fuera del lado izquierdo
+                                newX >= BOARD_WIDTH || // Fuera del lado derecho
+                                newY >= BOARD_HEIGHT || // Fuera de la parte inferior
+                                (newY >= 0 && board[newY][newX]) // Colisión con otra pieza
+                            ) {
                                 return false;
                             }
                         }
@@ -495,13 +488,13 @@
 
             moveLeft() {
                 if (this.isValidMove(this.x - 1, this.y)) {
-                    this.x--;
+                    this.x -= 1; 
                 }
             }
 
             moveRight() {
                 if (this.isValidMove(this.x + 1, this.y)) {
-                    this.x++;
+                    this.x += 1;
                 }
             }
 
