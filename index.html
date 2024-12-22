@@ -206,6 +206,19 @@
             background: #005;
         }
 
+        #rotateButton {
+            background: rgba(0, 0, 255, 0.8);
+            font-size: 28px;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        #rotateButton:active {
+            transform: rotate(90deg) scale(0.95);
+            background: rgba(0, 0, 255, 1);
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
@@ -349,12 +362,39 @@
             }
 
             rotate() {
-                const rotated = this.shape[0].map((_, i) =>
-                    this.shape.map(row => row[i]).reverse()
-                );
+                // Crear una matriz temporal para la rotación
+                const N = this.shape.length;
+                let rotated = Array(N).fill().map(() => Array(N).fill(0));
                 
+                // Realizar la rotación
+                for (let i = 0; i < N; i++) {
+                    for (let j = 0; j < N; j++) {
+                        rotated[i][j] = this.shape[N - 1 - j][i];
+                    }
+                }
+                
+                // Verificar si la rotación es válida
                 if (this.isValidMove(this.x, this.y, rotated)) {
                     this.shape = rotated;
+                } else {
+                    // Intentar ajustar la posición si la rotación colisiona con las paredes
+                    const kicks = [
+                        { x: 1, y: 0 },   // Intentar mover a la derecha
+                        { x: -1, y: 0 },  // Intentar mover a la izquierda
+                        { x: 0, y: -1 },  // Intentar mover arriba
+                        { x: 2, y: 0 },   // Intentar mover 2 espacios a la derecha
+                        { x: -2, y: 0 }   // Intentar mover 2 espacios a la izquierda
+                    ];
+                    
+                    // Probar cada ajuste posible
+                    for (const kick of kicks) {
+                        if (this.isValidMove(this.x + kick.x, this.y + kick.y, rotated)) {
+                            this.x += kick.x;
+                            this.y += kick.y;
+                            this.shape = rotated;
+                            return;
+                        }
+                    }
                 }
             }
 
@@ -474,9 +514,13 @@
                         if (!isGameOver && currentPiece) {
                             currentPiece.rotate();
                             updateBoard();
+                            rotateButton.style.transform = 'rotate(90deg)';
+                            setTimeout(() => {
+                                rotateButton.style.transform = 'rotate(0deg)';
+                            }, 150);
                         }
                     },
-                    interval: 250
+                    interval: 0 
                 },
                 'dropButton': {
                     start: () => {
