@@ -326,6 +326,7 @@
         let lastRotateTime = 0;
         let dropButtonLocked = false;
         const ROTATE_COOLDOWN = 200;
+        let moveLocked = false;
 
         // Elementos del DOM
         const gameBoard = document.getElementById('gameBoard');
@@ -341,34 +342,36 @@
 
         function setupTouchInterval(buttonId, action, interval = 150) {
             const button = document.getElementById(buttonId);
-            let isLocked = false; // Bloqueo temporal
+            let isLocked = false;
 
             button.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                if (isLocked || touchIntervals[buttonId]) return; // Evitar movimientos adicionales
-                action(); // Ejecutar acción
+                if (isLocked) return; // Evitar múltiples ejecuciones
+                action(); // Ejecutar acción inmediatamente
                 isLocked = true;
 
-                setTimeout(() => (isLocked = false), interval); // Desbloquear después del intervalo
                 touchIntervals[buttonId] = setInterval(() => {
                     if (!isLocked) {
-                        action();
+                        action(); // Repetir la acción si no está bloqueada
                         isLocked = true;
-                        setTimeout(() => (isLocked = false), interval);
+                        setTimeout(() => (isLocked = false), interval); // Desbloqueo después del intervalo
                     }
                 }, interval);
             });
 
             button.addEventListener('touchend', () => {
-                clearInterval(touchIntervals[buttonId]);
+                clearInterval(touchIntervals[buttonId]); // Limpiar el intervalo al soltar
                 delete touchIntervals[buttonId];
+                isLocked = false;
             });
 
             button.addEventListener('touchcancel', () => {
-                clearInterval(touchIntervals[buttonId]);
+                clearInterval(touchIntervals[buttonId]); // Manejar eventos cancelados
                 delete touchIntervals[buttonId];
+                isLocked = false;
             });
         }
+
         
         // Configurar los botones táctiles
         setupTouchInterval('leftButton', () => {
@@ -407,6 +410,19 @@
                     gameBoard.appendChild(cell);
                 }
             }
+        }
+
+        function setupLockedEvent(buttonId, action, interval = 150) {
+            const button = document.getElementById(buttonId);
+
+            button.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (moveLocked) return; 
+                moveLocked = true;
+
+                action();
+                setTimeout(() => (moveLocked = false), interval);
+            });
         }
 
         // Pieza actual
