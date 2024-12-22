@@ -362,55 +362,62 @@
             }
 
             rotate() {
-                // Crear una matriz temporal para la rotación
-                const N = this.shape.length;
-                let rotated = Array(N).fill().map(() => Array(N).fill(0));
+                // Caso especial para la pieza O (cuadrado) - no necesita rotar
+                if (this.color === 'O') return;
                 
-                // Realizar la rotación
+                const N = this.shape.length;
+                // Crear nueva matriz para la rotación
+                const rotated = Array(N).fill().map(() => Array(N).fill(0));
+                
+                // Rotar la matriz en sentido horario
                 for (let i = 0; i < N; i++) {
                     for (let j = 0; j < N; j++) {
                         rotated[i][j] = this.shape[N - 1 - j][i];
                     }
                 }
                 
-                // Verificar si la rotación es válida
-                if (this.isValidMove(this.x, this.y, rotated)) {
-                    this.shape = rotated;
-                } else {
-                    // Intentar ajustar la posición si la rotación colisiona con las paredes
-                    const kicks = [
-                        { x: 1, y: 0 },   // Intentar mover a la derecha
-                        { x: -1, y: 0 },  // Intentar mover a la izquierda
-                        { x: 0, y: -1 },  // Intentar mover arriba
-                        { x: 2, y: 0 },   // Intentar mover 2 espacios a la derecha
-                        { x: -2, y: 0 }   // Intentar mover 2 espacios a la izquierda
-                    ];
+                // Lista de posibles ajustes de posición para cuando la rotación colisiona
+                const kicks = [
+                    { x: 0, y: 0 },    // Sin ajuste
+                    { x: -1, y: 0 },   // Intentar mover izquierda
+                    { x: 1, y: 0 },    // Intentar mover derecha
+                    { x: 0, y: -1 },   // Intentar mover arriba
+                    { x: -2, y: 0 },   // Intentar mover 2 espacios izquierda
+                    { x: 2, y: 0 },    // Intentar mover 2 espacios derecha
+                    { x: 0, y: -2 }    // Intentar mover 2 espacios arriba
+                ];
+                
+                // Probar cada posible ajuste
+                for (const kick of kicks) {
+                    const newX = this.x + kick.x;
+                    const newY = this.y + kick.y;
                     
-                    // Probar cada ajuste posible
-                    for (const kick of kicks) {
-                        if (this.isValidMove(this.x + kick.x, this.y + kick.y, rotated)) {
-                            this.x += kick.x;
-                            this.y += kick.y;
-                            this.shape = rotated;
-                            return;
-                        }
+                    if (this.isValidMove(newX, newY, rotated)) {
+                        this.x = newX;
+                        this.y = newY;
+                        this.shape = rotated;
+                        return true;
                     }
                 }
+                
+                return false; // No se pudo rotar
             }
 
+            // Mejorar la validación de movimientos
             isValidMove(x, y, shape = this.shape) {
-                for (let row = 0; row < shape.length; row++) {
-                    for (let col = 0; col < shape[row].length; col++) {
+                const width = shape[0].length;
+                const height = shape.length;
+                
+                for (let row = 0; row < height; row++) {
+                    for (let col = 0; col < width; col++) {
                         if (shape[row][col]) {
                             const newX = x + col;
                             const newY = y + row;
-
-                            if (
-                                newX < 0 ||
-                                newX >= BOARD_WIDTH ||
+                            
+                            // Verificar bordes y colisiones
+                            if (newX < 0 || newX >= BOARD_WIDTH || 
                                 newY >= BOARD_HEIGHT ||
-                                (newY >= 0 && board[newY][newX])
-                            ) {
+                                (newY >= 0 && board[newY][newX])) {
                                 return false;
                             }
                         }
