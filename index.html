@@ -341,13 +341,29 @@
 
         function setupTouchInterval(buttonId, action, interval = 150) {
             const button = document.getElementById(buttonId);
+            let isLocked = false; // Bloqueo para evitar múltiples disparos
 
             button.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                if (touchIntervals[buttonId]) return; // Evita múltiples intervalos
+                if (isLocked || touchIntervals[buttonId]) return; // Evita múltiples intervalos
 
                 action(); // Ejecuta la acción de inmediato
-                touchIntervals[buttonId] = setInterval(action, interval);
+                isLocked = true; // Activa el bloqueo
+
+                setTimeout(() => {
+                    isLocked = false; // Desbloquea después de un corto periodo
+                }, interval);
+
+                touchIntervals[buttonId] = setInterval(() => {
+                    if (!isLocked) {
+                        action();
+                        isLocked = true;
+
+                        setTimeout(() => {
+                            isLocked = false;
+                        }, interval);
+                    }
+                }, interval);
             });
 
             button.addEventListener('touchend', () => {
