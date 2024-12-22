@@ -342,36 +342,30 @@
 
         function setupTouchInterval(buttonId, action, interval = 150) {
             const button = document.getElementById(buttonId);
-            let isLocked = false;
+            let intervalId = null;
+            let locked = false;
 
             button.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                if (isLocked) return; // Evitar múltiples ejecuciones
-                action(); // Ejecutar acción inmediatamente
-                isLocked = true;
+                if (!locked) {
+                    action(); 
+                    locked = true; 
+                }
 
-                touchIntervals[buttonId] = setInterval(() => {
-                    if (!isLocked) {
-                        action(); // Repetir la acción si no está bloqueada
-                        isLocked = true;
-                        setTimeout(() => (isLocked = false), interval); // Desbloqueo después del intervalo
+                intervalId = setInterval(() => {
+                    if (!locked) {
+                        action();
+                        locked = true;
+                        setTimeout(() => (locked = false), interval);
                     }
                 }, interval);
             });
 
             button.addEventListener('touchend', () => {
-                clearInterval(touchIntervals[buttonId]); // Limpiar el intervalo al soltar
-                delete touchIntervals[buttonId];
-                isLocked = false;
-            });
-
-            button.addEventListener('touchcancel', () => {
-                clearInterval(touchIntervals[buttonId]); // Manejar eventos cancelados
-                delete touchIntervals[buttonId];
-                isLocked = false;
+                clearInterval(intervalId); 
+                locked = false;
             });
         }
-
         
         // Configurar los botones táctiles
         setupTouchInterval('leftButton', () => {
@@ -379,7 +373,7 @@
                 currentPiece.moveLeft();
                 updateBoard();
             }
-        });
+        }, 200);
 
         setupTouchInterval('rightButton', () => {
             if (currentPiece) {
@@ -504,7 +498,7 @@
 
             moveLeft() {
                 if (this.isValidMove(this.x - 1, this.y)) {
-                    this.x -= 1; 
+                    this.x -= 1;
                 }
             }
 
@@ -1074,6 +1068,22 @@
                 updateBoard();
             }
         });
+
+        function setupTouchControl(buttonId, action, cooldown = 150) {
+            const button = document.getElementById(buttonId);
+
+            button.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (moveLocked) return; // Bloquea el movimiento si ya está ejecutándose
+                moveLocked = true;
+
+                action(); // Ejecutar la acción
+
+                setTimeout(() => {
+                    moveLocked = false; // Desbloqueo después del cooldown
+                }, cooldown);
+            });
+        }
     </script>
 </body>
 </html>
