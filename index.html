@@ -72,6 +72,10 @@
             gap: 1px;
         }
 
+        #dropButton {
+            width: 100px !important;
+        }
+
         .stats {
             background: #111;
             padding: 10px;
@@ -130,14 +134,56 @@
         }
 
         #mobileControls {
-            position: absolute;
+            display: none; 
+            position: fixed;
             bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            left: 0;
+            right: 0;
+            padding: 10px;
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .controls-row {
             display: flex;
-            flex-wrap: wrap;
             justify-content: center;
             gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .mobile-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 255, 0.7);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: white;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .mobile-btn:active {
+            background: rgba(0, 0, 255, 0.9);
+            transform: scale(0.95);
+        }
+
+        .mobile-btn.wide {
+            width: 120px;
+        }
+
+        @media (max-width: 768px) {
+            #mobileControls {
+                display: block;
+            }
+            
+            #gameContainer {
+                margin-bottom: 180px; /* Espacio para los controles */
+            }
         }
 
         #mobileControls button {
@@ -190,12 +236,19 @@
         </div>
     </div>
 
+    <!-- Actualizar la estructura HTML de los controles móviles -->
     <div id="mobileControls">
-        <button id="leftButton">←</button>
-        <button id="rotateButton">↑</button>
-        <button id="rightButton">→</button>
-        <button id="downButton">↓</button>
-        <button id="dropButton">Drop</button>
+        <div class="controls-row">
+            <button class="mobile-btn" id="rotateButton">↻</button>
+        </div>
+        <div class="controls-row">
+            <button class="mobile-btn" id="leftButton">←</button>
+            <button class="mobile-btn" id="downButton">↓</button>
+            <button class="mobile-btn" id="rightButton">→</button>
+        </div>
+        <div class="controls-row">
+            <button class="mobile-btn wide" id="dropButton">DROP</button>
+        </div>
     </div>
 
     <div id="gameOver" style="display: none;">
@@ -376,6 +429,120 @@
             const shapes = Object.keys(SHAPES);
             const shape = shapes[Math.floor(Math.random() * shapes.length)];
             return new Piece(shape);
+        }
+
+        document.querySelectorAll('.mobile-btn').forEach(button => {
+            button.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+            });
+        });
+
+        // Mejorar el manejo de eventos táctiles
+        function setupMobileControls() {
+            const controlActions = {
+                'leftButton': {
+                    start: () => {
+                        if (!isGameOver && currentPiece) {
+                            currentPiece.moveLeft();
+                            updateBoard();
+                        }
+                    },
+                    interval: 150 // Velocidad de repetición en ms
+                },
+                'rightButton': {
+                    start: () => {
+                        if (!isGameOver && currentPiece) {
+                            currentPiece.moveRight();
+                            updateBoard();
+                        }
+                    },
+                    interval: 150
+                },
+                'downButton': {
+                    start: () => {
+                        if (!isGameOver && currentPiece) {
+                            if (!currentPiece.moveDown()) {
+                                lockPiece();
+                            }
+                            updateBoard();
+                        }
+                    },
+                    interval: 50
+                },
+                'rotateButton': {
+                    start: () => {
+                        if (!isGameOver && currentPiece) {
+                            currentPiece.rotate();
+                            updateBoard();
+                        }
+                    },
+                    interval: 250
+                },
+                'dropButton': {
+                    start: () => {
+                        if (!isGameOver && currentPiece) {
+                            currentPiece.hardDrop();
+                            lockPiece();
+                            updateBoard();
+                        }
+                    },
+                    interval: 0 // Sin repetición
+                }
+            };
+
+            let activeIntervals = {};
+
+            Object.keys(controlActions).forEach(buttonId => {
+                const button = document.getElementById(buttonId);
+                const action = controlActions[buttonId];
+
+                button.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    action.start();
+                    if (action.interval > 0) {
+                        activeIntervals[buttonId] = setInterval(action.start, action.interval);
+                    }
+                });
+
+                button.addEventListener('touchend', () => {
+                    if (activeIntervals[buttonId]) {
+                        clearInterval(activeIntervals[buttonId]);
+                        delete activeIntervals[buttonId];
+                    }
+                });
+
+                button.addEventListener('touchcancel', () => {
+                    if (activeIntervals[buttonId]) {
+                        clearInterval(activeIntervals[buttonId]);
+                        delete activeIntervals[buttonId];
+                    }
+                });
+            });
+
+            // Limpiar intervalos al game over
+            const originalGameOver = gameOver;
+            gameOver = function() {
+                Object.values(activeIntervals).forEach(clearInterval);
+                activeIntervals = {};
+                originalGameOver();
+            };
+        }
+
+        // Inicializar controles móviles al cargar
+        window.addEventListener('load', setupMobileControls);
+
+        // Actualizar la función resizeGame para manejar mejor los dispositivos móviles
+        function resizeGame() {
+            const isMobile = window.innerWidth <= 768;
+            const containerWidth = gameContainer.offsetWidth + 40;
+            const containerHeight = gameContainer.offsetHeight + (isMobile ? 200 : 40);
+            
+            const scale = Math.min(
+                window.innerWidth / containerWidth,
+                window.innerHeight / containerHeight
+            );
+            
+            gameContainer.style.transform = `scale(${scale})`;
         }
 
         // Actualizar tablero
